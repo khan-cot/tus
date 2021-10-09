@@ -65,7 +65,7 @@ contract TusswapRouter {
     ) external virtual ensure(deadline) returns (uint amountA, uint amountB, uint liquidity) {
         require(tokenB == WTUS, 'TusswapRouter: only tus address');
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
-        address pair = TusswapLibrary.pairFor(factory, tokenA, tokenB);
+        address pair = pairFor(factory, tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
         uint mint0 = amountBDesired;
@@ -81,7 +81,7 @@ contract TusswapRouter {
         address to,
         uint deadline
     ) public virtual ensure(deadline) returns (uint amountA, uint amountB) {
-        address pair = TusswapLibrary.pairFor(factory, tokenA, tokenB);
+        address pair = pairFor(factory, tokenA, tokenB);
         ITusswapPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
         (uint amount0, uint amount1) = ITusswapPair(pair).burn(to);
         (address token0,) = TusswapLibrary.sortTokens(tokenA, tokenB);
@@ -98,8 +98,8 @@ contract TusswapRouter {
             (address token0,) = TusswapLibrary.sortTokens(input, output);
             uint amountOut = amounts[i + 1];
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
-            address to = i < path.length - 2 ? TusswapLibrary.pairFor(factory, output, path[i + 2]) : _to;
-            ITusswapPair(TusswapLibrary.pairFor(factory, input, output)).swap(
+            address to = i < path.length - 2 ? pairFor(factory, output, path[i + 2]) : _to;
+            ITusswapPair(pairFor(factory, input, output)).swap(
                 amount0Out, amount1Out, to
             );
         }
@@ -114,7 +114,7 @@ contract TusswapRouter {
         amounts = getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'TusswapRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, TusswapLibrary.pairFor(factory, path[0], path[1]), amounts[0]
+            path[0], msg.sender, pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, to);
     }
@@ -128,7 +128,7 @@ contract TusswapRouter {
         amounts = getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= amountInMax, 'TusswapRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, TusswapLibrary.pairFor(factory, path[0], path[1]), amounts[0]
+            path[0], msg.sender, pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, to);
     }
@@ -166,7 +166,7 @@ contract TusswapRouter {
         return TusswapLibrary.getAmountIn(amountOut, reserveIn, reserveOut, fee);
     }
 
-    function getAmountsOut(uint amountIn, address[] memory path)
+    function getAmountsOut(address factory,uint amountIn, address[] memory path)
         public
         view
         virtual
@@ -181,7 +181,7 @@ contract TusswapRouter {
         }
     }
 
-    function getAmountsIn(uint amountOut, address[] memory path)
+    function getAmountsIn(address factory,uint amountOut, address[] memory path)
         public
         view
         virtual
