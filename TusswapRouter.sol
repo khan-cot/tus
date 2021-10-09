@@ -2,7 +2,7 @@ pragma solidity >=0.6.12;
 
 
 import './libraries/TusswapLibrary.sol';
-import './libraries/SafeMath.sol';
+import './interfaces/ITusswapPair.sol';
 import './libraries/TransferHelper.sol';
 import './interfaces/ITusswapFactory.sol';
 import './interfaces/IERC20.sol';
