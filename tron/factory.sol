@@ -161,6 +161,7 @@ contract TusswapPair is TusswapERC20 {
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
 
     address public factory;
+    address public router;
     address public token0;
     address public token1;
 
@@ -203,8 +204,9 @@ contract TusswapPair is TusswapERC20 {
     );
     event Sync(uint112 reserve0, uint112 reserve1);
 
-    constructor() public {
+    constructor(address _router) public {
         factory = msg.sender;
+        router = _router;
     }
 
     // called once by the factory at time of deployment
@@ -232,6 +234,7 @@ contract TusswapPair is TusswapERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to,uint mint0) external lock returns (uint liquidity) {
+        require(msg.sender == router, 'Tusswap mint: FORBIDDEN');
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint balance0 = IERC20Tusswap(token0).balanceOf(address(this));
         uint balance1 = IERC20Tusswap(token1).balanceOf(address(this));

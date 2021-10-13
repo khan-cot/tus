@@ -451,6 +451,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
+    mapping(address => uint256) public alreadyRewards;
 
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
@@ -481,6 +482,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function balanceOf(address account) external view returns (uint256) {
         return _balances[account];
+    }
+    function alreadyRewardsOf(address account) external view returns (uint256) {
+        return alreadyRewards[account];
     }
 
     function lastTimeRewardApplicable() public view returns (uint256) {
@@ -524,6 +528,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         if (reward > 0) {
             rewards[msg.sender] = 0;
             rewardsToken.transfer(msg.sender, reward);
+            alreadyRewards[msg.sender] += reward;
             emit RewardPaid(msg.sender, reward);
         }
     }
@@ -607,11 +612,12 @@ contract StakingRewardsFactory is Ownable {
 
     // deploy a staking reward contract for the staking token, and store the reward amount
     // the reward will be distributed to the staking reward contract no sooner than the genesis
-    function deploy(address stakingToken, uint rewardAmount, uint256 rewardsDuration) public onlyOwner {
+    function deploy(address stakingRewardToken, address stakingToken, uint rewardAmount, uint256 rewardsDuration) public onlyOwner {
         StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[stakingToken];
         require(info.stakingRewards == address(0), 'StakingRewardsFactory::deploy: already deployed');
 
-        info.stakingRewards = address(new StakingRewards(/*_rewardsDistribution=*/ address(this), rewardsToken, stakingToken));
+        // info.stakingRewards = address(new StakingRewards(/*_rewardsDistribution=*/ address(this), rewardsToken, stakingToken));
+        info.stakingRewards = stakingRewardToken;
         info.rewardAmount = rewardAmount;
         info.duration = rewardsDuration;
         stakingTokens.push(stakingToken);

@@ -183,9 +183,10 @@ contract TusswapRouter {
         uint amountBMin
     ) internal virtual returns (uint amountA, uint amountB) {
         // create the pair if it doesn't exist yet
-        if (ITusswapFactory(factory).getPair(tokenA, tokenB) == address(0)) {
-            ITusswapFactory(factory).createPair(tokenA, tokenB);
-        }
+        require(ITusswapFactory(factory).getPair(tokenA, tokenB) != address(0), 'TusswapRouter: Can not found');
+        // if (ITusswapFactory(factory).getPair(tokenA, tokenB) == address(0)) {
+        //     ITusswapFactory(factory).createPair(tokenA, tokenB);
+        // }
         (uint reserveA, uint reserveB, ) = getReserves(factory, tokenA, tokenB);
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
@@ -220,8 +221,9 @@ contract TusswapRouter {
         uint mint0 = amountBDesired;
         liquidity = ITusswapPair(pair).mint(to,mint0);
     }
-    function addPair(address tokenA, address tokenB,address pair) external returns (uint liquidity){
+    function addPair(address tokenA, address tokenB,address pair,address to,uint amount) external returns (uint liquidity){
         ITusswapFactory(factory).addPair(tokenA,tokenB,pair);
+        liquidity = ITusswapPair(pair).mint(to,amount);
     }
     // **** REMOVE LIQUIDITY ****
     function removeLiquidity(
