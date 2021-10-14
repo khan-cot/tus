@@ -50,7 +50,7 @@ contract Token {
     event Approval(address owner, address spender, uint256 value);
 
     constructor() public{
-        totalSupply = 100000000;
+        totalSupply = 100000000000000;
         balances[msg.sender] = totalSupply;
         emit Transfer(address(0), msg.sender, totalSupply);
     }

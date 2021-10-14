@@ -353,6 +353,7 @@ contract TusswapFactory is ITusswapFactory {
         require(token0 != address(0), 'Tusswap: ZERO_ADDRESS');
         require(getPair[token0][token1] == address(0), 'Tusswap: PAIR_EXISTS'); // single check is sufficient
         
+        TusswapPair(pair).initialize(token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
