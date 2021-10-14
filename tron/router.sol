@@ -221,9 +221,8 @@ contract TusswapRouter {
         uint mint0 = amountBDesired;
         liquidity = ITusswapPair(pair).mint(to,mint0);
     }
-    function addPair(address tokenA, address tokenB,address pair,address to,uint amount) external returns (uint liquidity){
+    function addPair(address tokenA, address tokenB,address pair,address to) external returns (uint liquidity){
         ITusswapFactory(factory).addPair(tokenA,tokenB,pair);
-        liquidity = ITusswapPair(pair).mint(to,amount);
     }
     // **** REMOVE LIQUIDITY ****
     function removeLiquidity(
