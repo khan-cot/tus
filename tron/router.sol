@@ -265,7 +265,7 @@ contract TusswapRouter {
         uint deadline
     ) external virtual ensure(deadline) returns (uint[] memory amounts) {
         require(path.length == 2, 'TusswapRouter: INVALID_PATH');
-        uint amountInWithFee = amountIn.mul(1000-3);
+        uint amountInWithFee = amountIn.mul(1000-3)/1000;
         uint fee = amountIn.sub(amountInWithFee);
         amounts = getAmountsOut(factory, amountInWithFee, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'TusswapRouter: INSUFFICIENT_OUTPUT_AMOUNT');

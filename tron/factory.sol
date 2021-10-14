@@ -172,7 +172,7 @@ contract TusswapPair is TusswapERC20 {
 
     uint public price0CumulativeLast;
     uint public price1CumulativeLast;
-    uint8 public fee = 3;
+    uint8 public fee = 0;
 
     uint private unlocked = 1;
     modifier lock() {
