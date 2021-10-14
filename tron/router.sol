@@ -265,27 +265,33 @@ contract TusswapRouter {
         address to,
         uint deadline
     ) external virtual ensure(deadline) returns (uint[] memory amounts) {
-        amounts = getAmountsOut(factory, amountIn, path);
+        require(path.length == 2, 'TusswapRouter: INVALID_PATH');
+        uint amountInWithFee = amountIn.mul(1000-3);
+        uint fee = amountIn.sub(amountInWithFee);
+        amounts = getAmountsOut(factory, amountInWithFee, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'TusswapRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, pairFor(factory, path[0], path[1]), amounts[0]
+            path[0], msg.sender, ITusswapFactory(factory).feeTo(), fee
         );
-        _swap(amounts, path, to);
-    }
-    function swapTokensForExactTokens(
-        uint amountOut,
-        uint amountInMax,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external virtual ensure(deadline) returns (uint[] memory amounts) {
-        amounts = getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'TusswapRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, to);
     }
+    // function swapTokensForExactTokens(
+    //     uint amountOut,
+    //     uint amountInMax,
+    //     address[] calldata path,
+    //     address to,
+    //     uint deadline
+    // ) external virtual ensure(deadline) returns (uint[] memory amounts) {
+    //     amounts = getAmountsIn(factory, amountOut, path);
+    //     require(amounts[0] <= amountInMax, 'TusswapRouter: EXCESSIVE_INPUT_AMOUNT');
+    //     TransferHelper.safeTransferFrom(
+    //         path[0], msg.sender, pairFor(factory, path[0], path[1]), amounts[0]
+    //     );
+    //     _swap(amounts, path, to);
+    // }
 
     // **** LIBRARY FUNCTIONS ****
     function pairFor(address factory, address tokenA, address tokenB) internal view returns (address pair) {
