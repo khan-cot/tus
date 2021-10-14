@@ -160,6 +160,7 @@ contract TusswapPair is TusswapERC20 {
 
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
 
+    address public owner;
     address public factory;
     address public router;
     address public token0;
@@ -204,8 +205,9 @@ contract TusswapPair is TusswapERC20 {
     );
     event Sync(uint112 reserve0, uint112 reserve1);
 
-    constructor(address _router) public {
-        factory = msg.sender;
+    constructor(address _router,address _factory) public {
+        owner = msg.sender;
+        factory = _factory;
         router = _router;
     }
 
@@ -307,8 +309,8 @@ contract TusswapPair is TusswapERC20 {
     }
 
     function setFee(uint8 _fee) external {
-        address feeToSetter = ITusswapFactory(factory).feeToSetter();
-        require(msg.sender == feeToSetter, 'Tusswap: FORBIDDEN');
+        // address feeToSetter = ITusswapFactory(factory).feeToSetter();
+        require(msg.sender == owner, 'Tusswap: FORBIDDEN');
         fee = _fee;
     }
 }
