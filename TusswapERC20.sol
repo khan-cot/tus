@@ -51,11 +51,11 @@ contract TusswapERC20 {
     }
 
     function transferFrom(address from, address to, uint value) external returns (bool) {
-        require(allowance[from][msg.sender] >= value, "Insufficient allowance");
-  
-        allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
-        
+        if (allowance[from][msg.sender] != uint(-1)) {
+            allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
+        }
         _transfer(from, to, value);
+        return true;
         return true;
     }
 }
