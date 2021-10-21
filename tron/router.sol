@@ -218,7 +218,7 @@ contract TusswapRouter {
         address pair = pairFor(factory, tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-        uint mint0 = amountBDesired;
+        uint mint0 = amountB;
         liquidity = ITusswapPair(pair).mint(to,mint0);
     }
     // function addPair(address tokenA, address tokenB,address pair,address to) external returns (uint liquidity){

