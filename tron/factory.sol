@@ -159,6 +159,7 @@ contract TusswapPair is TusswapERC20 {
     using SafeMathTusswap  for uint;
     using UQ112x112 for uint224;
 
+    uint public constant MINIMUM_LIQUIDITY = 10**3;
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
 
     address public owner;
@@ -239,7 +240,7 @@ contract TusswapPair is TusswapERC20 {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function mint(address to,uint mint0) external lock returns (uint liquidity) {
+    function mint(address to) external lock returns (uint liquidity) {
         require(msg.sender == router, 'Tusswap mint: FORBIDDEN');
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint balance0 = IERC20Tusswap(token0).balanceOf(address(this));
@@ -247,7 +248,15 @@ contract TusswapPair is TusswapERC20 {
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
-        liquidity = mint0.mul(10);
+        
+        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        if (_totalSupply == 0) {
+            liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+           _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+        } else {
+            liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+        }
+        require(liquidity > 0, 'Tusswap: INSUFFICIENT_LIQUIDITY_MINTED');
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);

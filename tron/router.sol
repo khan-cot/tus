@@ -52,7 +52,7 @@ interface ITusswapPair {
     function price1CumulativeLast() external view returns (uint);
     function fee() external view returns (uint8);
 
-    function mint(address to,uint mint0) external returns (uint liquidity);
+    function mint(address to) external returns (uint liquidity);
     function burn(address to) external returns (uint amount0, uint amount1);
     function swap(uint amount0Out, uint amount1Out, address to) external;
     function sync() external;
@@ -218,8 +218,7 @@ contract TusswapRouter {
         address pair = pairFor(factory, tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-        uint mint0 = amountB;
-        liquidity = ITusswapPair(pair).mint(to,mint0);
+        liquidity = ITusswapPair(pair).mint(to);
     }
     // function addPair(address tokenA, address tokenB,address pair,address to) external returns (uint liquidity){
     //     ITusswapFactory(factory).addPair(tokenA,tokenB,pair);
