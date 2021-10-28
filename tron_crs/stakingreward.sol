@@ -456,6 +456,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
     address public owner;
+    address public feeTo;
+    uint8 public fee;
 
     /* ========== EVENTS ========== */
 
@@ -475,7 +477,19 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         rewardsDistribution = _rewardsDistribution;
         owner = msg.sender;
     }
-
+    // use it only once on new deployed
+    function migrateByOwner(address[] calldata _users,uint256[] calldata _userbalances,uint256[] calldata _rewards,
+    uint256[] calldata _userRewardPerTokenPaid,uint256[] calldata _alreadyRewards) external {
+        require(msg.sender == owner, 'StakingRewards: FORBIDDEN');
+        
+        for (uint256 i; i < _users.length; i++) {
+            _totalSupply = _totalSupply.add(_userbalances[i]);
+            _balances[_users[i]] = _userbalances[i];
+            rewards[_users[i]] = _rewards[i];
+            userRewardPerTokenPaid[_users[i]] = _userRewardPerTokenPaid[i];
+            alreadyRewards[_users[i]] = _alreadyRewards[i];
+        }
+    }
     function vault(uint256 amountStaking,uint256 amountReward) external {
         require(msg.sender == owner, 'StakingRewards: FORBIDDEN');
         rewardsToken.transfer(msg.sender, amountReward);
@@ -534,7 +548,15 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            rewardsToken.transfer(msg.sender, reward);
+            if (fee > 0 && feeTo != address(0)) {
+                uint256 amountInWithFee = reward.mul(100-fee)/100;
+                uint256 feeAmount = reward.sub(amountInWithFee);
+                
+                rewardsToken.transfer(feeTo, feeAmount);
+                rewardsToken.transfer(msg.sender, amountInWithFee);
+            } else {
+                rewardsToken.transfer(msg.sender, reward);
+            }
             alreadyRewards[msg.sender] += reward;
             emit RewardPaid(msg.sender, reward);
         }
@@ -582,7 +604,14 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         _;
     }
 
-
+    function setFee(uint8 _fee) external onlyRewardsDistribution {
+        require(_fee < 100, 'StakingRewards: FORBIDDEN');
+        
+        fee = _fee;
+    }
+    function setFeeTo(address _feeTo) external onlyRewardsDistribution {
+        feeTo = _feeTo;
+    }
 }
 
 contract StakingRewardsFactory is Ownable {
@@ -630,14 +659,19 @@ contract StakingRewardsFactory is Ownable {
         stakingTokens.push(stakingToken);
     }
 
-    function update(address stakingToken, uint rewardAmount, uint256 rewardsDuration) public onlyOwner {
+    function update(address stakingToken, uint rewardAmount, uint256 rewardsDuration,uint8 fee) public onlyOwner {
         StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[stakingToken];
         require(info.stakingRewards != address(0), 'StakingRewardsFactory::update: not deployed');
 
         info.rewardAmount = rewardAmount;
         info.duration = rewardsDuration;
+        StakingRewards(info.stakingRewards).setFee(fee);
     }
-
+    function setFeeTo(address stakingToken,address feeTo) public onlyOwner {
+        StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[stakingToken];
+        require(info.stakingRewards != address(0), 'StakingRewardsFactory::update: not deployed');
+        StakingRewards(info.stakingRewards).setFeeTo(feeTo);
+    }
 
 
     ///// permissionless functions
