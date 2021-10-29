@@ -256,9 +256,11 @@ contract StakingPool is ReentrancyGuard {
     event RewardPaid(address indexed user, uint256 reward);
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _stakingToken) public {
+    constructor(address _stakingToken,uint256 threshold) public {
         stakingToken = IERC20(_stakingToken);
-        _totalSupply = 10**3;
+        _totalSupply = 0;
+        rate = 2;
+        _threshold = threshold;
         owner = msg.sender;
     }
     modifier onlyOwner() {
@@ -361,6 +363,20 @@ contract StakingPool is ReentrancyGuard {
                 emit RewardPaid(msg.sender, amount);
             }
         }
+    }
+    function updateUserThreshold(address account,uint256 threshold) external onlyOwner {
+        StakingInfo storage info = _balances[account];
+        require(info.balance != 0,"no more staking");
+        info.threshold = threshold;
+    }
+    function updateThreshold(uint256 threshold) external onlyOwner {
+        _threshold = threshold;
+    }
+    function updateUserRedeem(address account,uint256 amount) external onlyOwner {
+        StakingInfo storage info = _balances[account];
+        require(info.balance != 0,"no more staking");
+        require(info.balance*2 >= amount,"amount too large");
+        info.redeem = amount;
     }
     function _updateReward(address account) internal {
         (uint256 reward,uint256 last) = staticRedeem(msg.sender);
