@@ -439,7 +439,11 @@ contract RewardsDistributionRecipient {
 
 contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, ReentrancyGuard {
     using SafeMath for uint256;
-
+    
+    struct RedeemInfo {
+        uint8 fee;
+        uint256 endtime;
+    }
     /* ========== STATE VARIABLES ========== */
 
     IERC20 public rewardsToken;
@@ -455,9 +459,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
+    mapping(address => RedeemInfo) private _redeeminfos;
     address public owner;
     address public feeTo;
-    uint8 public fee;
 
     /* ========== EVENTS ========== */
 
@@ -525,11 +529,36 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     function earned(address account) public view returns (uint256) {
         return _balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).div(1e8).add(rewards[account]);
     }
-
+    function durationToFee(uint256 duration) public view returns(uint8) {
+        uint256 d1 = 7 days;
+        uint256 d2 = 15 days;
+        uint256 d3 = 30 days;
+        uint256 d4 = 60 days;
+        require(d1 == duration || d2 == duration || d3 == duration ||d4 == duration, "invalid params");
+        
+        uint8 fee = 0;
+        if (d1 == duration) {
+            fee = 3;
+        } else if (d2 == duration) {
+            fee = 2;
+        } else if (d3 == duration) {
+            fee = 1;
+        } else {
+            fee = 0;
+        }
+        return fee;
+    }
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function stake(uint256 amount) external nonReentrant updateReward(msg.sender) {
+    function stake(uint256 amount,uint256 duration) external nonReentrant updateReward(msg.sender) {
         require(amount > 0, "Cannot stake 0");
+        uint256 endtime = block.timestamp + duration;
+        RedeemInfo storage info = _redeeminfos[msg.sender];
+        require(info.endtime < endtime,"invalid duration");
+        uint8 fee = durationToFee(duration);
+        info.endtime = endtime;
+        info.fee = fee;
+        
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
         stakingToken.transferFrom(msg.sender, address(this), amount);
@@ -538,8 +567,15 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function withdraw(uint256 amount) public nonReentrant updateReward(msg.sender) {
         require(amount > 0, "Cannot withdraw 0");
+        RedeemInfo storage info = _redeeminfos[msg.sender];
+        require(info.endtime > 0 && block.timestamp >= info.endtime,"invalid endtime or can not redeem");
+        
         _totalSupply = _totalSupply.sub(amount);
         _balances[msg.sender] = _balances[msg.sender].sub(amount);
+        if (_balances[msg.sender] == 0) {
+            info.endtime = 0;
+            info.fee = 0;
+        }
         stakingToken.transfer(msg.sender, amount);
         emit Withdrawn(msg.sender, amount);
     }
@@ -548,6 +584,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
+            RedeemInfo storage info = _redeeminfos[msg.sender];
+            uint8 fee = info.fee;
             if (fee > 0 && feeTo != address(0)) {
                 uint256 amountInWithFee = reward.mul(100-fee)/100;
                 uint256 feeAmount = reward.sub(amountInWithFee);
@@ -604,11 +642,6 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         _;
     }
 
-    function setFee(uint8 _fee) external onlyRewardsDistribution {
-        require(_fee < 100, 'StakingRewards: FORBIDDEN');
-        
-        fee = _fee;
-    }
     function setFeeTo(address _feeTo) external onlyRewardsDistribution {
         feeTo = _feeTo;
     }
@@ -659,13 +692,12 @@ contract StakingRewardsFactory is Ownable {
         stakingTokens.push(stakingToken);
     }
 
-    function update(address stakingToken, uint rewardAmount, uint256 rewardsDuration,uint8 fee) public onlyOwner {
+    function update(address stakingToken, uint rewardAmount, uint256 rewardsDuration) public onlyOwner {
         StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[stakingToken];
         require(info.stakingRewards != address(0), 'StakingRewardsFactory::update: not deployed');
 
         info.rewardAmount = rewardAmount;
         info.duration = rewardsDuration;
-        StakingRewards(info.stakingRewards).setFee(fee);
     }
     function setFeeTo(address stakingToken,address feeTo) public onlyOwner {
         StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[stakingToken];
