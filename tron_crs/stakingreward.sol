@@ -417,7 +417,7 @@ interface IStakingRewards {
     function alreadyRewardsOf(address account) external view returns (uint256);
     // Mutative
 
-    function stake(uint256 amount) external;
+    function stake(uint256 amount,uint256 duration) external;
 
     function withdraw(uint256 amount) external;
 
@@ -443,6 +443,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     struct RedeemInfo {
         uint8 fee;
         uint256 endtime;
+        uint256 duration;
     }
     /* ========== STATE VARIABLES ========== */
 
@@ -554,10 +555,13 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         require(amount > 0, "Cannot stake 0");
         uint256 endtime = block.timestamp + duration;
         RedeemInfo storage info = _redeeminfos[msg.sender];
-        require(info.endtime < endtime,"invalid duration");
+        require(info.endtime < endtime,"invalid endtime");
+        require(duration >= info.duration,"invalid duration");
+        
         uint8 fee = durationToFee(duration);
         info.endtime = endtime;
         info.fee = fee;
+        info.duration = duration;
         
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
@@ -646,6 +650,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         feeTo = _feeTo;
     }
 }
+
 
 contract StakingRewardsFactory is Ownable {
     // immutables
