@@ -459,8 +459,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     mapping(address => uint256) public alreadyRewards;
 
     uint256 private _totalSupply;
-    mapping(address => uint256) private _balances;
-    mapping(address => RedeemInfo) private _redeeminfos;
+    mapping(address => uint256) public _balances;
+    mapping(address => RedeemInfo) public _redeeminfos;
     address public owner;
     address public feeTo;
 
