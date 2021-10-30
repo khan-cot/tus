@@ -445,6 +445,10 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         uint256 endtime;
         uint256 duration;
     }
+    struct Fees {
+        uint8 fee;
+        bool isuse;
+    }
     /* ========== STATE VARIABLES ========== */
 
     IERC20 public rewardsToken;
@@ -461,6 +465,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     uint256 private _totalSupply;
     mapping(address => uint256) public _balances;
     mapping(address => RedeemInfo) public _redeeminfos;
+    mapping(uint256 => Fees) public _fees;
     address public owner;
     address public feeTo;
 
@@ -481,6 +486,18 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         stakingToken = IERC20(_stakingToken);
         rewardsDistribution = _rewardsDistribution;
         owner = msg.sender;
+        init();
+    }
+    function init() internal {
+        _updateFee(7 days,3,true);
+        _updateFee(15 days,2,true);
+        _updateFee(30 days,1,true);
+        _updateFee(60 days,0,true);
+    }
+    function _updateFee(uint256 duration, uint8 fee,bool use) internal {
+        Fees storage info = _fees[duration];
+        info.fee = fee;
+        info.isuse = use;
     }
     // use it only once on new deployed
     function migrateByOwner(address[] calldata _users,uint256[] calldata _userbalances,uint256[] calldata _rewards,
@@ -499,6 +516,12 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         require(msg.sender == owner, 'StakingRewards: FORBIDDEN');
         rewardsToken.transfer(msg.sender, amountReward);
         stakingToken.transfer(msg.sender, amountStaking);
+    }
+    function updateFee(uint256 duration, uint8 fee,bool use) external {
+        require(msg.sender == owner, 'StakingRewards: FORBIDDEN');
+        require(fee <= 100,"invalid params");
+        
+       _updateFee(duration,fee,use);
     }
     /* ========== VIEWS ========== */
 
@@ -531,23 +554,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         return _balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).div(1e8).add(rewards[account]);
     }
     function durationToFee(uint256 duration) public view returns(uint8) {
-        uint256 d1 = 7 days;
-        uint256 d2 = 15 days;
-        uint256 d3 = 30 days;
-        uint256 d4 = 60 days;
-        require(d1 == duration || d2 == duration || d3 == duration ||d4 == duration, "invalid params");
-        
-        uint8 fee = 0;
-        if (d1 == duration) {
-            fee = 3;
-        } else if (d2 == duration) {
-            fee = 2;
-        } else if (d3 == duration) {
-            fee = 1;
-        } else {
-            fee = 0;
-        }
-        return fee;
+        Fees storage info = _fees[duration];
+        require(info.isuse,"not a duration");
+        return info.fee;
     }
     /* ========== MUTATIVE FUNCTIONS ========== */
 
