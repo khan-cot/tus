@@ -259,7 +259,7 @@ contract StakingPool is ReentrancyGuard {
     constructor(address _stakingToken,uint256 threshold) public {
         stakingToken = IERC20(_stakingToken);
         _totalSupply = 0;
-        rate = 2;
+        rate = 20;
         _threshold = threshold;
         owner = msg.sender;
     }
@@ -269,6 +269,9 @@ contract StakingPool is ReentrancyGuard {
     }
     function vault(uint256 amount) external onlyOwner {
         stakingToken.transfer(msg.sender, amount);
+    }
+    function updateRate(uint _rate) external onlyOwner {
+        rate = _rate;
     }
     function setMigrateData(address[] calldata accounts,uint256[] calldata redeemAmounts,
     uint256[] calldata thresholds) external onlyOwner {
@@ -304,8 +307,8 @@ contract StakingPool is ReentrancyGuard {
         if (begin == 0) {
             r = 0;
         }
-        reward = info.redeem.mul(r.mul(rate)) / 1000 + staticRewards[account];
-        uint256 unit = info.redeem.mul(rate) / 1000;
+        reward = info.redeem.mul(r.mul(rate)) / 10000 + staticRewards[account];
+        uint256 unit = info.redeem.mul(rate) / 10000;
         uint256 timeleft = begin + r.mul(DURATION);
         require(block.timestamp >= timeleft,"invalid timeleft");
         uint256 redeemleft = block.timestamp.sub(timeleft).mul(unit) / DURATION;
@@ -387,7 +390,7 @@ contract StakingPool is ReentrancyGuard {
     }
     function updateUserThreshold(address account,uint256 threshold) external onlyOwner {
         StakingInfo storage info = _balances[account];
-        require(info.balance != 0,"no more staking");
+        // require(info.balance != 0,"no more staking");
         info.threshold = threshold;
     }
     function updateThreshold(uint256 threshold) external onlyOwner {
@@ -403,7 +406,7 @@ contract StakingPool is ReentrancyGuard {
         (uint256 reward,uint256 last) = staticRedeem(msg.sender);
         staticRewards[msg.sender] = reward;
         StakingInfo storage info = _balances[msg.sender];
-        if (info.balance != 0) {
+        if (info.redeem != 0) {
             info.lastBegin = last;
         }
     }
