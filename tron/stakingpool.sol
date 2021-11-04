@@ -270,6 +270,21 @@ contract StakingPool is ReentrancyGuard {
     function vault(uint256 amount) external onlyOwner {
         stakingToken.transfer(msg.sender, amount);
     }
+    function setMigrateData(address[] calldata accounts,uint256[] calldata redeemAmounts,
+    uint256[] calldata thresholds) external onlyOwner {
+        require(accounts.length == redeemAmounts.length,"invalid params");
+        
+        for (uint256 i; i < accounts.length; i++) {
+            StakingInfo storage info = _balances[accounts[i]];
+            uint256 balance = redeemAmounts[i] / 2;
+            _totalSupply = _totalSupply.add(balance);
+            info.balance = balance;
+            info.redeem = redeemAmounts[i];
+            info.lastBegin = block.timestamp;
+            info.threshold = thresholds[i];
+        }
+        
+    }
     /* ========== VIEWS ========== */
     function totalSupply() external view returns (uint256) {
         return _totalSupply;
@@ -289,14 +304,20 @@ contract StakingPool is ReentrancyGuard {
         if (begin == 0) {
             r = 0;
         }
-        uint256 reward = info.redeem.mul(r.mul(rate)) / 1000 + staticRewards[account];
+        reward = info.redeem.mul(r.mul(rate)) / 1000 + staticRewards[account];
+        uint256 unit = info.redeem.mul(rate) / 1000;
+        uint256 timeleft = begin + r.mul(DURATION);
+        require(block.timestamp >= timeleft,"invalid timeleft");
+        uint256 redeemleft = block.timestamp.sub(timeleft).mul(unit) / DURATION;
+        reward = reward.add(redeemleft);
         if (reward > info.redeem) {
             reward = info.redeem;
         }
-        last = begin + r.mul(DURATION);
-        if (last > block.timestamp) {
-            last = block.timestamp;
-        }
+        last = block.timestamp;
+        // last = begin + r.mul(DURATION);
+        // if (last > block.timestamp) {
+        //     last = block.timestamp;
+        // }
     }
     /* ========== MUTATIVE FUNCTIONS ========== */
 
@@ -374,8 +395,8 @@ contract StakingPool is ReentrancyGuard {
     }
     function updateUserRedeem(address account,uint256 amount) external onlyOwner {
         StakingInfo storage info = _balances[account];
-        require(info.balance != 0,"no more staking");
-        require(info.balance*2 >= amount,"amount too large");
+        // require(info.balance != 0,"no more staking");
+        // require(info.balance*2 >= amount,"amount too large");
         info.redeem = amount;
     }
     function _updateReward(address account) internal {
