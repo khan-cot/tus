@@ -274,7 +274,7 @@ contract StakingPool is ReentrancyGuard {
         rate = _rate;
     }
     function setMigrateData(address[] calldata accounts,uint256[] calldata redeemAmounts,
-    uint256[] calldata thresholds) external onlyOwner {
+    uint256[] calldata rewards,uint256[] calldata alreads) external onlyOwner {
         require(accounts.length == redeemAmounts.length,"invalid params");
         
         for (uint256 i; i < accounts.length; i++) {
@@ -284,7 +284,8 @@ contract StakingPool is ReentrancyGuard {
             info.balance = balance;
             info.redeem = redeemAmounts[i];
             info.lastBegin = block.timestamp;
-            info.threshold = thresholds[i];
+            staticRewards[accounts[i]] = rewards[i];
+            alreadyRewards[accounts[i]] = alreads[i];
         }
         
     }
@@ -317,11 +318,8 @@ contract StakingPool is ReentrancyGuard {
             reward = info.redeem;
         }
         last = block.timestamp;
-        // last = begin + r.mul(DURATION);
-        // if (last > block.timestamp) {
-        //     last = block.timestamp;
-        // }
     }
+
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     function stake(uint256 amount) external nonReentrant {
@@ -357,7 +355,7 @@ contract StakingPool is ReentrancyGuard {
     function withdraw1(uint256 amount) public nonReentrant {
         _updateReward(msg.sender);
         StakingInfo storage info = _balances[msg.sender];
-        require(info.lastRedeem1 == 0 || info.lastRedeem1 - DURATION >= block.timestamp,"withdraw1 FORBIDDEN");
+        require(info.lastRedeem1 == 0 || block.timestamp - DURATION >= info.lastRedeem1,"withdraw1 FORBIDDEN");
         
         if ((info.threshold == 0 && _threshold >= amount) || 
         (info.threshold != 0 && info.threshold >= amount)) {
@@ -374,7 +372,7 @@ contract StakingPool is ReentrancyGuard {
     function withdraw2(uint256 amount) public nonReentrant {
         _updateReward(msg.sender);
         StakingInfo storage info = _balances[msg.sender];
-        require(info.lastRedeem2 == 0 || info.lastRedeem2 - DURATION >= block.timestamp,"withdraw1 FORBIDDEN");
+        require(info.lastRedeem2 == 0 || block.timestamp - DURATION >= info.lastRedeem2,"withdraw1 FORBIDDEN");
         
         if ((info.threshold == 0 && _threshold >= amount) || 
         (info.threshold != 0 && info.threshold >= amount)) {
@@ -388,6 +386,8 @@ contract StakingPool is ReentrancyGuard {
             }
         }
     }
+    
+    
     function updateUserThreshold(address account,uint256 threshold) external onlyOwner {
         StakingInfo storage info = _balances[account];
         // require(info.balance != 0,"no more staking");
@@ -398,9 +398,15 @@ contract StakingPool is ReentrancyGuard {
     }
     function updateUserRedeem(address account,uint256 amount) external onlyOwner {
         StakingInfo storage info = _balances[account];
-        // require(info.balance != 0,"no more staking");
-        // require(info.balance*2 >= amount,"amount too large");
         info.redeem = amount;
+        uint256 balance = amount / 2;
+        _totalSupply = _totalSupply.add(balance);
+    }
+    function updateAlready(address account,uint256 amount) external onlyOwner {
+        alreadyRewards[account] = amount;
+    }
+    function updateStaticReward(address account,uint256 amount) external onlyOwner {
+        staticRewards[account] = amount;
     }
     function _updateReward(address account) internal {
         (uint256 reward,uint256 last) = staticRedeem(msg.sender);
