@@ -241,7 +241,10 @@ contract StakingPool is ReentrancyGuard {
     uint256 public _threshold;
     uint256 private _totalSupply;
     address public owner;
+    address public root;
     uint public rate;
+    uint public multiple;
+    bool public ownerUse;
     
     mapping(address => StakingInfo) public _balances;
     mapping(address => uint256) public staticRewards;
@@ -256,36 +259,52 @@ contract StakingPool is ReentrancyGuard {
     event RewardPaid(address indexed user, uint256 reward);
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _stakingToken,uint256 threshold) public {
+    constructor(address _stakingToken,uint256 threshold,address _root) public {
         stakingToken = IERC20(_stakingToken);
         _totalSupply = 0;
         rate = 20;
         _threshold = threshold;
         owner = msg.sender;
+        multiple = 2;
+        root = _root;
+        ownerUse = false;
     }
     modifier onlyOwner() {
-        require(msg.sender == owner, "Caller is only owner");
+        require(msg.sender == owner && ownerUse, "Caller is only owner");
         _;
     }
-    function vault(uint256 amount) external onlyOwner {
+    function updateManager(address account) external {
+        require(msg.sender == root, "Caller is only root");
+        owner = account;
+    }
+    function enableManager(bool enable) external {
+         require(msg.sender == root, "Caller is only root");
+         ownerUse = enable;
+    }
+    function vault(uint256 amount) external {
+        require(msg.sender == root, "Caller is only root");
         stakingToken.transfer(msg.sender, amount);
+    }
+    
+    function updateMultiple(uint _multiple) external onlyOwner {
+        multiple = _multiple;
     }
     function updateRate(uint _rate) external onlyOwner {
         rate = _rate;
     }
     function setMigrateData(address[] calldata accounts,uint256[] calldata redeemAmounts,
-    uint256[] calldata rewards,uint256[] calldata alreads) external onlyOwner {
+    uint256[] calldata rewards) external onlyOwner {
         require(accounts.length == redeemAmounts.length,"invalid params");
         
         for (uint256 i; i < accounts.length; i++) {
             StakingInfo storage info = _balances[accounts[i]];
-            uint256 balance = redeemAmounts[i] / 2;
-            _totalSupply = _totalSupply.add(balance);
-            info.balance = balance;
+            // uint256 balance = redeemAmounts[i] / multiple;
+            // _totalSupply = _totalSupply.add(balance);
+            // info.balance = balance;
             info.redeem = redeemAmounts[i];
             info.lastBegin = block.timestamp;
             staticRewards[accounts[i]] = rewards[i];
-            alreadyRewards[accounts[i]] = alreads[i];
+            // alreadyRewards[accounts[i]] = alreads[i];
         }
         
     }
@@ -331,7 +350,7 @@ contract StakingPool is ReentrancyGuard {
         _totalSupply = _totalSupply.add(amount);
         stakingToken.transferFrom(msg.sender, address(this), amount);
         
-        uint256 redeem0 = amount.mul(2);
+        uint256 redeem0 = amount.mul(multiple);
         info.balance = info.balance.add(amount);
         info.redeem = info.redeem.add(redeem0);
         info.lastBegin = block.timestamp;
@@ -399,7 +418,7 @@ contract StakingPool is ReentrancyGuard {
     function updateUserRedeem(address account,uint256 amount) external onlyOwner {
         StakingInfo storage info = _balances[account];
         info.redeem = amount;
-        uint256 balance = amount / 2;
+        uint256 balance = amount / multiple;
         _totalSupply = _totalSupply.add(balance);
     }
     function updateAlready(address account,uint256 amount) external onlyOwner {
